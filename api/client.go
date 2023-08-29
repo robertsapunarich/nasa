@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -24,8 +25,17 @@ func NewApiClient(baseUrl, apiKey string) *NasaApiClient {
 	}
 }
 
-func GetApod[R Resp](nasaApiClient *NasaApiClient) (*R, error) {
+func GetApod[R Resp](nasaApiClient *NasaApiClient, date *string, count *int) (*R, error) {
 	url := fmt.Sprintf("%s/planetary/apod?api_key=%s", nasaApiClient.BaseUrl, nasaApiClient.ApiKey)
+
+	if date != nil && count != nil {
+		return nil, errors.New("you cannot request a count of photos and a specific date. please choose one or the other")
+	} else if date != nil {
+		url = url + fmt.Sprintf("&date=%s", *date)
+	} else if count != nil {
+		url = url + fmt.Sprintf("&count=%d", *count)
+	}
+
 	resp, err := nasaApiClient.Client.Get(url)
 
 	if err != nil {
