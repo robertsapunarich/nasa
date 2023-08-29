@@ -12,6 +12,10 @@ type NasaApiClient struct {
 	Client  *http.Client
 }
 
+type Resp interface {
+	ApodResponse | []ApodResponse
+}
+
 func NewApiClient(baseUrl, apiKey string) *NasaApiClient {
 	return &NasaApiClient{
 		BaseUrl: baseUrl,
@@ -20,7 +24,7 @@ func NewApiClient(baseUrl, apiKey string) *NasaApiClient {
 	}
 }
 
-func (nasaApiClient *NasaApiClient) GetApod() (*ApodResponse, error) {
+func GetApod[R Resp](nasaApiClient *NasaApiClient) (*R, error) {
 	url := fmt.Sprintf("%s/planetary/apod?api_key=%s", nasaApiClient.BaseUrl, nasaApiClient.ApiKey)
 	resp, err := nasaApiClient.Client.Get(url)
 
@@ -29,7 +33,7 @@ func (nasaApiClient *NasaApiClient) GetApod() (*ApodResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var apodResp ApodResponse
+	var apodResp R
 
 	err = json.NewDecoder(resp.Body).Decode(&apodResp)
 

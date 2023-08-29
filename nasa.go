@@ -12,7 +12,7 @@ func main() {
 
 	client := api.NewApiClient(BaseUrl, ApiKey)
 
-	apod, err := client.GetApod()
+	apod, err := api.GetApod[api.ApodResponse](client)
 
 	if err != nil {
 		panic(err)
