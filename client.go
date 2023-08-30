@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 )
@@ -13,10 +12,6 @@ type NasaApiClient struct {
 	Client  *http.Client
 }
 
-type Resp interface {
-	ApodResponse | []ApodResponse
-}
-
 func NewApiClient(baseUrl, apiKey string) *NasaApiClient {
 	return &NasaApiClient{
 		BaseUrl: baseUrl,
@@ -25,25 +20,44 @@ func NewApiClient(baseUrl, apiKey string) *NasaApiClient {
 	}
 }
 
-func GetApod[R Resp](nasaApiClient *NasaApiClient, date *string, count *int) (*R, error) {
-	url := fmt.Sprintf("%s/planetary/apod?api_key=%s", nasaApiClient.BaseUrl, nasaApiClient.ApiKey)
+// Returns n random items from NASA's APOD collection where n is equal to the count provided.
+func (c *NasaApiClient) GetApodRandom(count int) (*[]ApodResponse, error) {
+	url := fmt.Sprintf("%s/planetary/apod?api_key=%s&count=%d", c.BaseUrl, c.ApiKey, count)
 
-	if date != nil && count != nil {
-		return nil, errors.New("you cannot request a count of photos and a specific date. please choose one or the other")
-	} else if date != nil {
-		url = url + fmt.Sprintf("&date=%s", *date)
-	} else if count != nil {
-		url = url + fmt.Sprintf("&count=%d", *count)
+	resp, err := c.Client.Get(url)
+
+	if err != nil {
+		return nil, err
 	}
 
-	resp, err := nasaApiClient.Client.Get(url)
+	defer resp.Body.Close()
+
+	var apodResp []ApodResponse
+	err = json.NewDecoder(resp.Body).Decode(&apodResp)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &apodResp, nil
+}
+
+// Returns today's Astronomy Picture of the Day, or optionally the APOD for the date provided.
+func (c *NasaApiClient) GetApod(date *string) (*ApodResponse, error) {
+	url := fmt.Sprintf("%s/planetary/apod?api_key=%s", c.BaseUrl, c.ApiKey)
+
+	if date != nil {
+		url = url + fmt.Sprintf("&date=%s", *date)
+	}
+
+	resp, err := c.Client.Get(url)
 
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	var apodResp R
+	var apodResp ApodResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&apodResp)
 
